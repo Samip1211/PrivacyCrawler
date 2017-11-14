@@ -10,49 +10,51 @@ def parse(page):
      
      return soup;
 
+def search_condition(Bodycontent):
+    
+    for div in Bodycontent.find_all("div"):
+        
+        for terms in div.find_all("a",text=re.compile("Condition")):
+            termsURL = terms.get('href').encode('ascii','ignore')
+        
+            print(termsURL)
+            return termsURL
 
+def get_Body_Content(domain):
+    req = requests.get(domain) # amazon,apple,facebook, youtube, 
 
-def findPrivacy(domain):
+    page = req.text
+
+    soup = parse(page)
+
+    Bodycontent = soup.find("body")
+    
+    return Bodycontent
+
+def findPrivacy(Bodycontent,domain):
 	
+    #print(Bodycontent)
+    for div in Bodycontent.find_all("div"):
 
-	req = requests.get(domain) # amazon,apple,facebook, youtube, 
+        for privacy in div.find_all("a",text=re.compile("Privacy")):
 
-	page = req.text
+            privacyURL = privacy.get('href').encode('ascii','ignore')
+            
+            #print(privacyURL)
+            
+            if(str(privacyURL).find(domain)):
+                return privacyURL
 
-	soup = parse(page)
+def findToS(Bodycontent,domain):
 
-	Bodycontent = soup.find("body")
-
-	#print(Bodycontent)
-
-
-	for div in Bodycontent.find_all("div"):
-
-	    #print(div) 
-	        for privacy in div.find_all("a",text="Privacy Policy"):
-	                privacyURL = privacy.get('href').encode('ascii','ignore')
-	                if(privacyURL.find(domain)):
-	                        return privacyURL
-def findToS(domain):
-
-	req = requests.get(domain) # amazon,apple,facebook, youtube, 
-
-	page = req.text
-
-	soup = parse(page)
-
-	Bodycontent = soup.find("body")
-
-	#print(Bodycontent)
-
-
-	for div in Bodycontent.find_all("div"):
-
-	    #print(div) 
-	        for terms in div.find_all("a",text="Legal"):
-	                termsURL = terms.get('href').encode('ascii','ignore')
-	                if(termsURL.find(domain)):
-	                        return termsURL
+#print(Bodycontent)
+    for div in Bodycontent.find_all("div"):
+        
+        for terms in div.find_all("a",text=re.compile("Legal")):
+            termsURL = terms.get('href').encode('ascii','ignore')
+            print(termsURL)
+            if(str(termsURL).find(domain)):
+                return termsURL
 
 def insertDB(domain, privacy, terms):
 
@@ -63,22 +65,29 @@ def insertDB(domain, privacy, terms):
 
 		conn.commit()
 	except sqlite3.Error as er:
-		print 'er:', er.message
+		print ('er:' + er.message)
 	conn.close()
 
 
 def main():
 
-	domain = sys.argv[1]
-	print(domain)
-	privacy = findPrivacy(domain)
+    domain = sys.argv[1]
+	
+    content = get_Body_Content(domain)
+    
+    #print(content)
+    
+    privacy = findPrivacy(content,domain)
 
-	terms = findToS(domain)
+    terms = findToS(content,domain)
+    
+    if terms is None:
+        terms = search_condition(content)
 
-	print(terms)
-	print(privacy)
+    print(terms)
+    print(privacy)
 
-	insertDB(domain, privacy, terms)
+	#insertDB(domain, privacy, terms)
 
 
 main()
