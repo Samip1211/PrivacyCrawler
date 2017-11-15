@@ -10,15 +10,17 @@ def parse(page):
      
      return soup;
 
-def search_condition(Bodycontent):
+def search_condition(Bodycontent,domain):
     
     for div in Bodycontent.find_all("div"):
         
         for terms in div.find_all("a",text=re.compile("Condition")):
             termsURL = terms.get('href').encode('ascii','ignore')
-        
-            print(termsURL)
-            return termsURL
+            if(str(termsURL).find(domain)):
+            #print(termsURL)
+                return termsURL
+            else:
+                return str(domain)+str(termsURL)    
 
 def get_Body_Content(domain):
     req = requests.get(domain) # amazon,apple,facebook, youtube, 
@@ -47,22 +49,24 @@ def findPrivacy(Bodycontent,domain):
 
         for privacy in div.find_all("a",text=re.compile("Privacy")):
 
-            privacyURL = privacy.get('href').encode('ascii','ignore')
+            privacyURL = str(privacy.get('href').encode('ascii','ignore'))
             
-            #print(privacyURL)
+            print(privacyURL.find(domain))
             
-            if(str(privacyURL).find(domain)):
-                return privacyURL
-
+            if(privacyURL.find(domain) is -1):
+                return privacyURL.replace(" ' ","").replace("b","")
+                    
 def findToS(Bodycontent,domain):
     #print(Bodycontent)
     for div in Bodycontent.find_all("div"):
         
         for terms in div.find_all("a",text=re.compile("Legal")):
             termsURL = terms.get('href').encode('ascii','ignore')
-            print(termsURL)
-            if(str(termsURL).find(domain)):
+            #print(termsURL)
+            if(str(termsURL).find(domain) is not -1):
                 return termsURL
+            else:
+                return str(domain)+str(termsURL)     
 
 def insertDB(domain, privacy, terms):
 
@@ -85,6 +89,22 @@ def read_robot_file():
     
     return lines
 
+def get_allow_files(list):
+    allow_list =[]
+    for content in list:
+        allow = content.split(':')
+        if allow[0] == "Allow":
+            allow_list.append(allow[1])
+    return allow_list        
+
+def get_disallow_files(list):
+    disallow_list =[]
+    for content in list:
+        disallow = content.split(':')
+        if disallow[0] == "Disallow":
+            disallow_list.append(disallow[1]) 
+    return disallow_list                              
+
 def main():
 
     domain = sys.argv[1]
@@ -92,7 +112,7 @@ def main():
     robots = get_robots_file(domain)
     
     lines = read_robot_file()
-    list=[]
+    list_of_allow_and_disallow=[]
     
     for i in range(0,len(lines)):
         if lines[i]=="User-agent: *\n":
@@ -102,13 +122,15 @@ def main():
             while True:
                 j=j+1
                 if lines[j]!="\n":
-                    list.append(lines[j].replace('\n',""))
+                    list_of_allow_and_disallow.append(lines[j].replace('\n',""))
                 else:
                     break
                     
+    allow_list = get_allow_files(list_of_allow_and_disallow) )
+    
+    disallow_list =get_disallow_files(list_of_allow_and_disallow))          
                 
-                
-    print(list)
+    #print(list)
     
     
     
@@ -121,13 +143,14 @@ def main():
     terms = findToS(content,domain)
     
     if terms is None:
-        terms = search_condition(content)
+        terms = search_condition(content,domain)
 
     print(terms)
+    
     print(privacy)
 
 	#insertDB(domain, privacy, terms)
-    
+       
 
 main()
 
