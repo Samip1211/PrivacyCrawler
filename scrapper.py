@@ -3,7 +3,7 @@ import re
 from bs4 import BeautifulSoup
 import sqlite3
 import sys
-
+#UserAgent,
 
 def parse(page):
      soup = BeautifulSoup(page, 'html.parser')
@@ -31,6 +31,15 @@ def get_Body_Content(domain):
     
     return Bodycontent
 
+def get_robots_file(domain):
+    req = requests.get(domain+"/robots.txt")
+    page = req.text
+    f = open("robots.txt","w")
+    f.write(page)
+    f.close()
+    
+    return page      
+
 def findPrivacy(Bodycontent,domain):
 	
     #print(Bodycontent)
@@ -46,8 +55,7 @@ def findPrivacy(Bodycontent,domain):
                 return privacyURL
 
 def findToS(Bodycontent,domain):
-
-#print(Bodycontent)
+    #print(Bodycontent)
     for div in Bodycontent.find_all("div"):
         
         for terms in div.find_all("a",text=re.compile("Legal")):
@@ -68,11 +76,42 @@ def insertDB(domain, privacy, terms):
 		print ('er:' + er.message)
 	conn.close()
 
+def read_robot_file():
+    f = open("robots.txt","r")
+    
+    lines = f.readlines()
+    
+    f.close()
+    
+    return lines
 
 def main():
 
     domain = sys.argv[1]
-	
+    
+    robots = get_robots_file(domain)
+    
+    lines = read_robot_file()
+    list=[]
+    
+    for i in range(0,len(lines)):
+        if lines[i]=="User-agent: *\n":
+            
+            j=i
+            
+            while True:
+                j=j+1
+                if lines[j]!="\n":
+                    list.append(lines[j].replace('\n',""))
+                else:
+                    break
+                    
+                
+                
+    print(list)
+    
+    
+    
     content = get_Body_Content(domain)
     
     #print(content)
@@ -88,7 +127,7 @@ def main():
     print(privacy)
 
 	#insertDB(domain, privacy, terms)
-
+    
 
 main()
 
