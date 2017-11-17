@@ -18,19 +18,6 @@ def parse(page):
     return soup;
 
 
-# searches for terms and condition
-"""
-def search_condition(Bodycontent):
-
-    for div in Bodycontent.find_all("div"):
-
-        for terms in div.find_all("a",text=re.compile("Condition")):
-            termsURL = terms.get('href').encode('ascii','ignore')
-
-            print(termsURL)
-            return termsURL
-
-"""
 
 ##This function will take in the domain and a term, it will then try to find that term anywhere on the page using Mercury API wrapper
 
