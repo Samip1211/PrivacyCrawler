@@ -91,12 +91,29 @@ def insertDB(domain, privacy, terms):
     conn = sqlite3.connect('tos_scraper.db')
 
     try:
-        conn.execute("INSERT INTO website(tos, privacy, url) VALUES (?, ?, ?)", [terms, privacy, domain])
+        conn.execute("UPDATE website SET tos = ?, privacy = ?,  checked = '1' WHERE url = ?", [terms, privacy, domain])
 
         conn.commit()
     except sqlite3.Error as er:
         print('er:' + er.message)
     conn.close()
+
+def getDomains():
+
+    conn = sqlite3.connect('tos_scraper.db')
+    cur = conn.cursor()
+
+
+    try:
+        cur.execute("SELECT url FROM website WHERE Checked=0")
+        rows = cur.fetchall()
+
+    except sqlite3.Error as er:
+        print('er:' + er.message)
+
+
+    conn.close()
+    return rows
 
 
 ## goes through a keyword list stored in file variable and then calls the findToS function with each keyword. Trying to find
@@ -118,48 +135,60 @@ def checkKeyWords(url, file):
 
 
 def main():
-    domain = "https://stackoverflow.com"
 
-    if(read_robot_file("https://stackoverflow.com")):
+    domains = getDomains()
+    PrivacyConfirmed = 0
+    TermsConfirmed = 0
+    for url in domains:
+        urlCheck = url[0]
 
-
-
-        content = get_Body_Content(domain)
-
-        # print(content)
-
-
-        terms = checkKeyWords(domain, "terms.txt")          #look for terms and conditions
-        privacy = checkKeyWords(domain, "privacy.txt")      #look for privacy policy
+        if(read_robot_file(urlCheck)):
 
 
-        if terms is None:
-            print("Could not find the terms of service")
 
-        if privacy is None:
-            print("Could not find Privacy Policy")
+            content = get_Body_Content(urlCheck)
 
-        print(terms)
-        print(privacy)
+            # print(content)
 
 
-        if(confirm_Page(terms, "Terms of Service")):
-            print("Terms of Service confirmed")
+            terms = checkKeyWords(urlCheck, "terms.txt")          #look for terms and conditions
+            privacy = checkKeyWords(urlCheck, "privacy.txt")      #look for privacy policy
+
+
+            if terms is None:
+                print("Could not find the terms of service")
+
+            if privacy is None:
+                print("Could not find Privacy Policy")
+
+            print(terms)
+            print(privacy)
+
+
+            if(confirm_Page(terms, "Terms of Service")):
+                print("Terms of Service confirmed")
+                termsConfirmed = 1
+            else:
+                print("Terms of service url might be a false positive")
+
+            if(confirm_Page(privacy, "Privacy Policy")):
+                print("Privacy Policy Confirmed")
+                privacyConfirmed = 1
+            else:
+                print("Privacy Policy url might be a false positive")
+
+
         else:
-            print("Terms of service url might be a false positive")
 
-        if(confirm_Page(privacy, "Privacy Policy")):
-            print("Privacy Policy Confirmed")
-        else:
-            print("Privac Policy url might be a false positive")
+            print("The website is not allowing us to scrape their main page")
 
 
-    else:
+        if ((termsConfirmed == 1) and (privacyConfirmed == 1)):
+            insertDB(urlCheck, privacy, terms)      #after we find the privacy and terms, we can insert it into database
 
-        print("The website is not allowing us to scrape their main page")
+        elif((termsConfirmed == 1) and (privacyConfirmed == 0)):
+            insertDB(urlCheck, None, terms)
 
-
-    insertDB(domain, privacy, terms)              #after we find the privacy and terms, we can insert it into database
-
-
+        elif((termsConfirmed == 1) and (privacyConfirmed == 0)):
+            print("could not find any privacy/terms of service")
 main()
